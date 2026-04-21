@@ -114,9 +114,27 @@ router.get('/track/:orderNumber', protect, async (req, res) => {
 });
 
 router.get('/:orderNumber', protect, async (req, res) => {
-  const [order] = await pool.query('SELECT order_number FROM orders WHERE order_number = ? AND user_id = ?', [req.params.orderId, req.user.id]);
-  if (order.length === 0) return res.status(404).json({ message: 'Order not found' });
-  res.json(order[0]);
+  try {
+    const [rows] = await pool.query(`
+      SELECT o.*, u.name as customer_name, u.phone, dz.zone_name
+      FROM orders o
+      JOIN users u ON o.user_id = u.id
+      LEFT JOIN delivery_zones dz ON o.delivery_zone_id = dz.id
+      WHERE o.order_number = ? AND o.user_id = ?
+    `, [req.params.orderNumber, req.user.id]);
+    if (rows.length === 0) return res.status(404).json({ message: 'Order not found' });
+    const order = rows[0];
+    const [items] = await pool.query(`
+      SELECT oi.*, p.name as product_name, v.size, v.color
+      FROM order_items oi
+      JOIN products p ON oi.variant_id = p.id
+      JOIN variants v ON oi.variant_id = v.id
+      WHERE oi.order_id = ?
+    `, [order.id]);
+    res.json({ ...order, items });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 });
 
 // Cancel order (restore stock)

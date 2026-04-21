@@ -56,10 +56,12 @@ export default function OrdersPage() {
     window.open(url, '_blank');
     setPaymentUrl(url);
     setPollingOrderId(order.order_number);
-    // window.open(paymentRes.data.checkoutUrl, '_blank');
+      // window.open(paymentRes.data.checkoutUrl, '_blank');
       // Store orderId to check status later
     sessionStorage.setItem('pendingOrderId', order.order_number);
-      // await fetchCart();
+    navigate(`/payment-status?order_id=${order.order_number}`);
+    
+    // await fetchCart();
     // } else {
     //   toast.error('Payment gateway error. Please complete payment later.');
     //   navigate(`/account?order=${orderNumber}`);
