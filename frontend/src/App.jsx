@@ -14,7 +14,7 @@ import PaymentStatusPage from './pages/PaymentStatusPage';
 import WishlistPage from './pages/WishlistPage';
 import { useAuth } from './context/AuthContext';
 import { Toaster } from 'react-hot-toast';
-
+import NotFoundPage from './components/404';
 
 function App() {
   const { user } = useAuth();
@@ -26,15 +26,17 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/shop" element={<ShopPage />} />
         <Route path="/product/:id" element={<ProductDetailPage />} />
-        <Route path="/orders" element={<OrdersPage />} />
+        {user && <Route path="/orders" element={<OrdersPage />} />}
         <Route path="/cart" element={<CartPage />} />
-        <Route path="/checkout" element={<CheckoutPage />} />
-        <Route path="/payment-status" element={<PaymentStatusPage />} />
+        {user && <Route path="/checkout" element={<CheckoutPage />} />}
+        {user && <Route path="/payment-status" element={<PaymentStatusPage />} />}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-        <Route path="/wishlist" element={<WishlistPage />} />
-        <Route path="/account" element={<AccountPage />} />
+        {user && <Route path="/wishlist" element={<WishlistPage />} />}
+        {user && <Route path="/account" element={<AccountPage />} />}
         {user?.role === 'admin' && <Route path="/admin/*" element={<AdminDashboard />} />}
+        {/* custom 404 icon or image */}
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
       <Toaster position="bottom-right" />
     </>

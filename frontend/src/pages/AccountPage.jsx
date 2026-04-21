@@ -271,7 +271,7 @@ export default function AccountPage() {
   if (selectedOrder) {
     const currentStep = statusSteps.indexOf(selectedOrder.order_status);
     return (
-      <div className="container mx-auto px-4 py-12">
+      <div className="container mx-auto px-4 py-12 absolute inset-0 bg-gradient-to-br from-black via-gray-900 to-black opacity-80">
         <div className="max-w-4xl mx-auto">
           <button
             onClick={() => setSelectedOrder(null)}
