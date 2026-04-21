@@ -35,6 +35,7 @@ export default function CartPage() {
       camera.position.z = 5;
   
       const renderer = new THREE.WebGLRenderer({
+        width: window.innerWidth,
         canvas,
         alpha: true,
         antialias: true
