@@ -6,7 +6,6 @@ import { useEffect, useState, useRef } from 'react';
 import { use } from 'react';
 import ConfirmModal from '../components/ConfirmModal';
 import { FiShoppingCart } from 'react-icons/fi';
-import * as THREE from 'three';
 
 
 export default function CartPage() {
@@ -19,86 +18,6 @@ export default function CartPage() {
   const Total = cartItems.map(item => (item.base_price + item.price_adjustment) * item.quantity).reduce((a, b) => a + b, 0);
   const [removeModal, setRemoveModal] = useState({ isOpen: false, itemId: null });
   
-  const canvasRef = useRef(null);
-  
-    useEffect(() => {
-      const canvas = canvasRef.current;
-  
-      const scene = new THREE.Scene();
-  
-      const camera = new THREE.PerspectiveCamera(
-        60,
-        window.innerWidth / window.innerHeight,
-        0.1,
-        100
-      );
-      camera.position.z = 5;
-  
-      const renderer = new THREE.WebGLRenderer({
-        width: window.innerWidth,
-        canvas,
-        alpha: true,
-        antialias: true
-      });
-  
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  
-      // Geometry (wave grid)
-      const geometry = new THREE.PlaneGeometry(12, 12, 64, 64);
-  
-      const material = new THREE.MeshBasicMaterial({
-        color: 0x222222,
-        wireframe: true
-      });
-  
-      const plane = new THREE.Mesh(geometry, material);
-      plane.rotation.x = -0.6;
-      scene.add(plane);
-  
-      const clock = new THREE.Clock();
-  
-      const animate = () => {
-        const t = clock.getElapsedTime();
-        const pos = geometry.attributes.position;
-  
-        for (let i = 0; i < pos.count; i++) {
-          const x = pos.getX(i);
-          const y = pos.getY(i);
-  
-          const wave =
-            Math.sin(x * 1.5 + t) * 0.25 +
-            Math.cos(y * 1.5 + t * 0.8) * 0.25;
-  
-          pos.setZ(i, wave);
-        }
-  
-        pos.needsUpdate = true;
-  
-        plane.rotation.z += 0.001;
-  
-        renderer.render(scene, camera);
-        requestAnimationFrame(animate);
-      };
-  
-      animate();
-  
-      // Resize
-      const handleResize = () => {
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-      };
-  
-      window.addEventListener('resize', handleResize);
-  
-      return () => {
-        window.removeEventListener('resize', handleResize);
-        renderer.dispose();
-        geometry.dispose();
-        material.dispose();
-      };
-    }, []);
   
 
   const removeItemWithConfirmation = (itemId) => {
@@ -119,10 +38,10 @@ export default function CartPage() {
        <main className="relative min-h-screen flex items-center justify-center bg-black text-white px-4 overflow-hidden">
       
             {/* Canvas Background */}
-            <canvas
+            {/* <canvas
               ref={canvasRef}
               className="absolute inset-0 w-full h-full opacity-40"
-            />
+            /> */}
       
             {/* Overlay gradient (important for readability) */}
             <div className="absolute inset-0 bg-gradient-to-b from-black/70 to-black/90 z-0" />

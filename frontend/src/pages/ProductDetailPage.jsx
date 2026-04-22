@@ -47,7 +47,8 @@ export default function ProductDetailPage() {
     await addToCart(selectedVariant.id, quantity);
     toast.success('Added to cart');
     await fetchCart();
-    }
+    navigate('/cart');
+  }
   };
 
   const handleWishlist = async () => {

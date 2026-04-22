@@ -31,7 +31,6 @@ export default function PaymentStatusPage() {
           attempts++;
 
           const res = await api.get(`/payment/status/${orderId}`);
-          console.log('Payment status check', res.data, order);
           // if payment status is 'pending', initialize payment again to refresh status
           // if (res.data.payment_status === 'pending' && attempts < maxAttempts) {
           //   await api.get(`/payment/initiate/${orderId}`);
@@ -70,7 +69,7 @@ export default function PaymentStatusPage() {
           <div className="text-green-500 text-6xl mb-4">✓</div>
           <h2 className="text-2xl font-bold">Payment Successful!</h2>
           <p className="text-gray-500 mt-2">Your order {orderNumber} has been confirmed.</p>
-          <button onClick={() => navigate('/account')} className="btn-primary mt-6">View My Orders</button>
+          <button onClick={() => navigate(`/account?order=${orderNumber}`)} className="btn-primary mt-6">View My Orders</button>
         </>
       )}
       {status === 'timeout' && (
@@ -78,7 +77,7 @@ export default function PaymentStatusPage() {
           <div className="text-yellow-500 text-6xl mb-4">⏳</div>
           <h2 className="text-2xl font-bold">Still Checking</h2>
           <p className="text-gray-500 mt-2">Payment may still be processing. Please check your orders page later.</p>
-          <button onClick={() => navigate('/account')} className="btn-primary mt-6">Go to Orders</button>
+          <button onClick={() => navigate(`/account?order=${orderNumber}`)} className="btn-primary mt-6">Go to Orders</button>
         </>
       )}
       {status === 'error' && (

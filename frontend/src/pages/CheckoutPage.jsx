@@ -182,7 +182,7 @@ export default function CheckoutPage() {
     
     const { orderId, orderNumber } = orderRes.data;
     toast.success('Order created! Opening payment window...');
-
+    
     const paymentRes = await api.post(`/payment/initiate/${orderNumber}`);
     
     if (paymentRes.data.checkoutUrl) {
@@ -196,6 +196,7 @@ export default function CheckoutPage() {
       toast.error('Payment gateway error. Please complete payment later.');
       navigate(`/account?order=${orderNumber}`);
     }
+    navigate(`/account?order=${orderNumber}`);
   } catch (err) {
     toast.error(err.response?.data?.message || 'Order failed. Please try again.');
     setLoading(false);
