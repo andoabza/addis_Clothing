@@ -284,7 +284,7 @@ router.post('/products', async (req, res) => {
     [name, description, category_id, base_price, image_url, is_featured || false]
   );
   // Log the creation
-  
+
   await logProductChange(result.insertId, 'create', req.body, req.user.id);
   await sendProductToTelegram({
     name,
@@ -300,10 +300,12 @@ router.post('/products', async (req, res) => {
 
 router.put('/products/:id', async (req, res) => {
   const { name, description, category_id, base_price, image_url, is_featured } = req.body;
+  const [oldData] = await pool.query('SELECT * FROM products WHERE id = ?', [req.params.id]);
   await pool.query(
     'UPDATE products SET name=?, description=?, category_id=?, base_price=?, image_url=?, is_featured=? WHERE id=?',
     [name, description, category_id, base_price, image_url, is_featured, req.params.id]
   );
+  const newData = { name, description, category_id, base_price, image_url, is_featured };
   await logProductChange(req.params.id, 'update', { before: oldData, after: newData }, req.user.id);
   res.json({ success: true });
   });
@@ -323,12 +325,15 @@ router.delete('/products/:id', async (req, res) => {
 //   res.status(201).json({ success: true });
 // });
 
-import { notifyVariantAdded, notifyAdminLowStock } from '../services/telegram.js';
-
 // Add/Update variant
 router.post('/variants', async (req, res) => {
   const { product_id, size, color, stock, price_adjustment, sku } = req.body;
   // ... insert variant
+  // check if sku exists 
+  const [existing] = await pool.query('SELECT id FROM variants WHERE sku = ?', [sku]);
+  if (existing.length > 0) {
+    return res.status(400).json({ message: 'SKU already exists' });
+  }
   const [result] = await pool.query(
     'INSERT INTO variants (product_id, size, color, stock, price_adjustment, sku) VALUES (?, ?, ?, ?, ?, ?)',
     [product_id, size, color, stock, price_adjustment, sku || null]

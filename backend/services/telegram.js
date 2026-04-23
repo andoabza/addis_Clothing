@@ -2,151 +2,131 @@ import axios from 'axios';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN ;
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID;
 const ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID;
 const FRONTEND_URL = process.env.FRONTEND_URL;
 
-console.log(BOT_TOKEN);
-
 if (!BOT_TOKEN) console.warn('⚠️ Telegram bot token missing. Notifications disabled.');
 
-// Helper: send any message to channel or admin
-async function sendMessage(chatId, text, parseMode = 'HTML') {
+// Helper: send formatted text (Markdown)
+async function sendMessage(chatId, text, parseMode = 'Markdown') {
   if (!BOT_TOKEN || !chatId) return false;
   try {
     const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
-    const res = await axios.post(url, { chat_id: chatId, text, parse_mode: parseMode });
+    const res = await axios.post(url, {
+      chat_id: chatId,
+      text,
+      parse_mode: parseMode,
+      disable_web_page_preview: false  // shows link preview
+    }, {
+      headers: { 'Content-Type': 'application/json' }
+    });
     return res.data.ok;
   } catch (err) {
-    console.error('Telegram send error:', err.response?.data || err.message);
+    console.error('Telegram sendMessage error:', err.response?.data || err.message);
     return false;
   }
 }
 
-async function sendPhoto(chatId, photoUrl, caption, parseMode = 'HTML') {
+// Helper: send photo with caption (Markdown)
+async function sendPhoto(chatId, photoUrl, caption, parseMode = 'Markdown') {
   if (!BOT_TOKEN || !chatId) return false;
   try {
     const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`;
-    const res = await axios.post(url, { chat_id: chatId, photo: photoUrl, caption, parse_mode: parseMode });
+    const res = await axios.post(url, {
+      chat_id: chatId,
+      photo: photoUrl,
+      caption,
+      parse_mode: parseMode
+    }, {
+      headers: { 'Content-Type': 'application/json' }
+    });
     return res.data.ok;
   } catch (err) {
-    console.error('Telegram photo error:', err.response?.data || err.message);
+    console.error('Telegram sendPhoto error:', err.response?.data || err.message);
     return false;
   }
 }
 
-// Format product URL
+// Generate clickable product link
 function getProductLink(productId) {
   return `${FRONTEND_URL}/product/${productId}`;
 }
 
-// Format variant list as HTML
-function formatVariants(variants) {
-  if (!variants.length) return '❌ No variants available.';
-  let html = '<b>📦 Available Variants:</b>\n';
+// Format variant list as Markdown
+function formatVariantsMarkdown(variants) {
+  if (!variants.length) return '❌ *No variants available* – product not for sale.';
+  let text = '*📦 Available Variants:*\n';
   variants.forEach(v => {
-    html += `• <b>${v.size}</b> / ${v.color} — stock: ${v.stock}${v.price_adjustment ? ` (${v.price_adjustment > 0 ? '+' : ''}${v.price_adjustment} ETB)` : ''}\n`;
+    const stockEmoji = v.stock === 0 ? '❌' : (v.stock <= 3 ? '⚠️' : '✅');
+    text += `${stockEmoji} *${v.size}* / ${v.color} — stock: ${v.stock}`;
+    if (v.price_adjustment) text += ` (${v.price_adjustment > 0 ? '+' : ''}${v.price_adjustment} ETB)`;
+    text += '\n';
   });
-  return html;
+  return text;
 }
 
-// Main: notify channel about a new/updated variant
-export async function notifyVariantAdded(product, variant, allVariants) {
+// ----- 1. Notify public channel when a variant is added/updated -----
+export async function notifyVariantAdded(product, variant, allVariants, action = 'added') {
   if (!BOT_TOKEN || !CHANNEL_ID) return false;
 
   const productUrl = getProductLink(product.id);
-  const action = variant.id ? 'updated' : 'added';
-  const caption = `
-🆕 <b>Variant ${action.toUpperCase()}!</b>
+  const title = action === 'added' ? '🆕 *New Variant Added!*' : '🔄 *Variant Updated*';
+  const variantLine = `• *${variant.size}* / ${variant.color} — stock: ${variant.stock}` +
+    (variant.price_adjustment ? ` (${variant.price_adjustment > 0 ? '+' : ''}${variant.price_adjustment} ETB)` : '');
 
-<b>📦 Product:</b> <a href="${productUrl}">${product.name}</a>
-<b>💰 Base price:</b> ETB ${product.base_price}
-<b>🏷️ Category:</b> ${product.category_name || 'N/A'}
-
-<b>✨ New variant:</b>
-• Size: ${variant.size}
-• Color: ${variant.color}
-• Stock: ${variant.stock}
-• Price adj.: ${variant.price_adjustment || 0} ETB
-
-${formatVariants(allVariants)}
-
-🔗 <a href="${productUrl}">👉 View product</a>
-  `;
+  const message = `${title}\n\n` +
+    `*📦 Product:* [${product.name}](${productUrl})\n` +
+    `*💰 Base price:* ETB ${product.base_price}\n` +
+    `*🏷️ Category:* ${product.category_name || 'N/A'}\n\n` +
+    `*✨ ${action === 'added' ? 'New' : 'Updated'} variant:*\n${variantLine}\n\n` +
+    `${formatVariantsMarkdown(allVariants)}\n\n` +
+    `${productUrl}`;
 
   if (product.image_url) {
-    return await sendPhoto(CHANNEL_ID, product.image_url, caption, 'HTML');
+    // Send photo + caption (Markdown)
+    return await sendPhoto(CHANNEL_ID, product.image_url, message, 'Markdown');
   } else {
-    return await sendMessage(CHANNEL_ID, caption, 'HTML');
+    return await sendMessage(CHANNEL_ID, message, 'Markdown');
   }
 }
 
-// Alert admin about low stock / zero stock
+// ----- 2. Alert admin (private) about low/out-of-stock -----
 export async function notifyAdminLowStock(product, variant) {
   if (!BOT_TOKEN || !ADMIN_CHAT_ID) return false;
 
   const productUrl = getProductLink(product.id);
-  let severity = variant.stock === 0 ? '⚠️ <b>OUT OF STOCK</b>' : '⚠️ <b>LOW STOCK</b>';
-  const message = `
-${severity}
+  const severity = variant.stock === 0 ? '⚠️ *OUT OF STOCK*' : '⚠️ *LOW STOCK*';
+  const caption = `${severity}\n\n` +
+    `*Product:* [${product.name}](${productUrl})\n` +
+    `*Variant:* ${variant.size} / ${variant.color}\n` +
+    `*Remaining stock:* ${variant.stock}\n\n` +
+    `Please restock soon.`;
 
-<b>Product:</b> <a href="${productUrl}">${product.name}</a>
-<b>Variant:</b> ${variant.size} / ${variant.color}
-<b>Remaining stock:</b> ${variant.stock}
-
-Please restock as soon as possible.
-  `;
-  return await sendMessage(ADMIN_CHAT_ID, message, 'HTML');
+  if (product.image_url) {
+    return await sendPhoto(ADMIN_CHAT_ID, product.image_url, caption, 'Markdown');
+  } else {
+    return await sendMessage(ADMIN_CHAT_ID, caption, 'Markdown');
+  }
 }
 
-// Re-export product notification (optional compatibility)
+// ----- 3. Notify channel when a product is first created (without variants) -----
 export const sendProductToTelegram = async (product, action = 'created') => {
   if (!BOT_TOKEN || !CHANNEL_ID) return false;
+
   const productUrl = getProductLink(product.id);
-  const caption = `
-🆕 <b>Product ${action.toUpperCase()}!</b>
+  const message = `🆕 *Product ${action.toUpperCase()}!*\n\n` +
+    `*📦 Name:* [${product.name}](${productUrl})\n` +
+    `*💰 Price:* ETB ${product.base_price}\n` +
+    `*🏷️ Category:* ${product.category_name || 'N/A'}\n` +
+    `*📝 Description:* ${product.description || 'No description'}\n` +
+    `*⭐ Featured:* ${product.is_featured ? 'Yes' : 'No'}\n\n` +
+    `${productUrl}`;
 
-<b>📦 Name:</b> <a href="${productUrl}">${product.name}</a>
-<b>💰 Price:</b> ETB ${product.base_price}
-<b>🏷️ Category:</b> ${product.category_name || 'N/A'}
-<b>📝 Description:</b> ${product.description || 'No description'}
-<b>⭐ Featured:</b> ${product.is_featured ? 'Yes' : 'No'}
-
-🔗 <a href="${productUrl}">👉 View product</a>
-  `;
   if (product.image_url) {
-    return await sendPhoto(CHANNEL_ID, product.image_url, caption, 'HTML');
+    return await sendPhoto(CHANNEL_ID, product.image_url, message, 'Markdown');
   } else {
-    return await sendMessage(CHANNEL_ID, caption, 'HTML');
+    return await sendMessage(CHANNEL_ID, message, 'Markdown');
   }
 };
-
-// example create a clothing product then notify
-const newProduct = { id: 123, name: 'T-Shirt', base_price: 500, category_name: 'Clothing', description: 'A cool t-shirt', is_featured: true, image_url: 'https://example.com/tshirt.jpg' };
-
-sendProductToTelegram(newProduct, 'created').then(success => {
-  if (success) console.log('Telegram notification sent successfully!');
-  else console.log('Failed to create product.');
-}).catch(err => console.error('Telegram error:', err));
-
-notifyVariantAdded(
-  { id: 123, name: 'T-Shirt', base_price: 500, category_name: 'Clothing', image_url: 'https://example.com/tshirt.jpg' },
-  { id: 456, size: 'M', color: 'Red', stock: 10, price_adjustment: 50 },
-  [
-    { size: 'S', color: 'Red', stock: 5, price_adjustment: 0 },
-    { size: 'M', color: 'Red', stock: 10, price_adjustment: 50 },
-    { size: 'L', color: 'Red', stock: 0, price_adjustment: 100 }
-  ]
-).then(success => {
-  if (success) console.log('Variant notification sent successfully!');
-  else console.log('Failed to send variant notification.');
-}).catch(err => console.error('Telegram error:', err));
-
-notifyAdminLowStock(
-  { id: 123, name: 'T-Shirt', base_price: 500, category_name: 'Clothing' },
-  { size: 'L', color: 'Red', stock: 0 }
-).then(success => {
-  if (success) console.log('Admin low stock alert sent successfully!');
-  else console.log('Failed to send admin alert.');
-}).catch(err => console.error('Telegram error:', err));

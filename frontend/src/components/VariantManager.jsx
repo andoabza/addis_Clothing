@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { FiEdit2, FiTrash2, FiPlus } from 'react-icons/fi';
+import ConfirmModal from './ConfirmModal';
 
 const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 const COLORS = ['Black', 'White', 'Red', 'Blue', 'Green', 'Yellow', 'Pink', 'Brown', 'Gray', 'Navy'];
@@ -10,6 +11,7 @@ export default function VariantManager({ productId }) {
   const [variants, setVariants] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editingVariant, setEditingVariant] = useState(null);
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, variantId: null });
   const [form, setForm] = useState({
     size: 'M',
     color: 'Black',
@@ -49,11 +51,24 @@ export default function VariantManager({ productId }) {
   };
 
   const deleteVariant = async (id) => {
-    if (confirm('Delete this variant?')) {
-      await api.delete(`/admin/variants/${id}`);
-      toast.success('Deleted');
-      fetchVariants();
+    setDeleteModal({ isOpen: true, variantId: id });
+  };
+
+  const handleDelete = async () => {
+    const variantId = deleteModal.variantId;
+    try {
+      await api.delete(`/admin/variants/${variantId}`);
+      toast.success('Variant deleted');
+      await fetchVariants();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete');
+    } finally {
+      setDeleteModal({ isOpen: false, variantId: null });
     }
+  }
+
+  const handleCloseDeleteModal = () => {
+    setDeleteModal({ isOpen: false, variantId: null });
   };
 
   const resetForm = () => {
@@ -204,6 +219,15 @@ export default function VariantManager({ productId }) {
           </div>
         </div>
       )}
+      <ConfirmModal
+              isOpen={deleteModal.isOpen}
+              onClose={handleCloseDeleteModal}
+              onConfirm={handleDelete}
+              title="Delete Variant"
+              message="Are you sure you want to delete this variant? This action cannot be undone."
+              confirmText="Yes, Delete"
+              cancelText="No, Keep It"
+            />
     </div>
   );
 }
