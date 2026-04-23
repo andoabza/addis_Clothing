@@ -59,7 +59,15 @@ export default function ProductDetailPage() {
     }
   };
 
-  if (!product) return <div className="container mx-auto px-4 py-20">Loading...</div>;
+  if (!product) return( 
+    // skeleton loader
+    <div className="container mx-auto px-4 py-12 animate-pulse">
+      {[...Array(6)].map((_, i) => (
+        <div key={i} className="bg-gray-300 rounded-lg mb-6 h-80 w-full" />
+        
+      ))}
+    </div>
+  );
 
   const price = product.base_price + (selectedVariant?.price_adjustment || 0);
 
