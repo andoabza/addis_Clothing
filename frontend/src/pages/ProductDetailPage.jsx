@@ -62,13 +62,25 @@ export default function ProductDetailPage() {
   if (!product) return( 
     // skeleton loader
     <div className="container mx-auto px-4 py-12 animate-pulse">
-      {[...Array(6)].map((_, i) => (
-        <div key={i} className="bg-gray-300 rounded-lg mb-6 h-80 w-full" />
-        
-      ))}
+      <div className="grid md:grid-cols-2 gap-12">
+        <div className="rounded-2xl overflow-hidden bg-gray-300 h-[400px]"></div>
+        <div>
+          <div className="flex justify-between items-start mb-4">
+            <div className="h-8 bg-gray-300 rounded w-1/2 mb-2"></div>
+            <div className="h-8 bg-gray-300 rounded-full w-10"></div>
+          </div>
+          <div className="h-6 bg-gray-300 rounded w-1/4 mb-4"></div>
+          <div className="h-4 bg-gray-300 rounded w-full mb-6"></div>
+          <div className="h-10 bg-gray-300 rounded w-full mb-4"></div>
+          <div className="h-10 bg-gray-300 rounded w-full mb-8"></div>
+          <div className="h-6 bg-gray-300 rounded w-1/3 mb-2"></div>
+          <div className="h-4 bg-gray-300 rounded
+            w-1/2"></div>
+        </div>
+      </div>
     </div>
   );
-
+ 
   const price = product.base_price + (selectedVariant?.price_adjustment || 0);
 
   return (
