@@ -132,7 +132,7 @@ export default function AccountPage() {
   }, []);
 
   const fetchProfile = async () => {
-    const res = await api.get('/user/profile');
+    const res = await api.get('/user/profile/');
     setProfile(res.data);
   };
   const fetchAddresses = async () => {
